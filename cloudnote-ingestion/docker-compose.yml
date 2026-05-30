@@ -1,0 +1,152 @@
+services:
+  # 1. FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+
+    container_name: cloudnote-backend
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/debug-meeting"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - ./logs:/app/logs
+      - ./screenshots:/app/screenshots
+
+    env_file:
+      - .env
+
+    environment:
+      - DB_PATH=/app/logs/cloudnote.db
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379/0
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 2. React Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+
+    container_name: cloudnote-frontend
+    restart: unless-stopped
+
+    ports:
+      - "3000:80"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # 3. Ingestion Worker
+  ingestion-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: cloudnote-ingestion-worker
+    restart: unless-stopped
+
+    depends_on:
+      backend:
+        condition: service_healthy
+
+    init: true
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./logs:/app/logs
+      - ./screenshots:/app/screenshots
+
+    environment:
+      - DB_PATH=/app/logs/cloudnote.db
+      - PYTHONUNBUFFERED=1
+      - REDIS_URL=redis://redis:6379/0
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # 4. Redis
+  redis:
+    image: redis:7-alpine
+
+    container_name: cloudnote-redis
+    restart: unless-stopped
+
+    expose:
+      - "6379"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # 5. Prometheus
+  prometheus:
+    image: prom/prometheus:v2.51.0
+
+    container_name: cloudnote-prometheus
+    restart: unless-stopped
+
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+
+    ports:
+      - "9090:9090"
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+  # 6. Grafana
+  grafana:
+    image: grafana/grafana-oss:10.4.1
+
+    container_name: cloudnote-grafana
+    restart: unless-stopped
+
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+    ports:
+      - "3001:3000"
+
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - grafana_data:/var/lib/grafana
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+volumes:
+  prometheus_data:
+  grafana_data:

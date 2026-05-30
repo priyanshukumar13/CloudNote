@@ -1,0 +1,51 @@
+name: Oracle VM Production Deployment CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+
+  workflow_dispatch:
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy Stack to self-hosted Oracle VM
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Execute Remote SSH Deploy Commands
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: ${{ secrets.ORACLE_PORT }}
+          script: |
+            echo "=== CLOUDNOTE PRODUCTION CD INITIATED ==="
+
+            # Navigate to deployment directory
+            if [ -d "/home/ubuntu/CloudNote" ]; then
+              cd /home/ubuntu/CloudNote
+            else
+              echo "ERROR: CloudNote deployment directory not found."
+              exit 1
+            fi
+
+            echo "Pulling latest code from GitHub..."
+            git pull origin main
+
+            echo "Restarting CloudNote services..."
+
+            pm2 restart cloudnote-backend || true
+            pm2 restart cloudnote-frontend || true
+            pm2 restart cloudnote-ingestion || true
+
+            echo "=== CLOUDNOTE PRODUCTION CD COMPLETED SUCCESSFULLY ==="
