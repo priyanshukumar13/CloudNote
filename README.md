@@ -1,6 +1,6 @@
-# CloudClass
+# CloudNote
 
-CloudClass is an AI-powered lecture automation platform designed to help students never miss an online class. Inspired by a real student problem, the platform automatically joins scheduled lectures, tracks attendance, captures attendance proof screenshots, generates AI-powered lecture summaries, and provides real-time monitoring through a cloud-native DevOps architecture.
+CloudNote is an AI-powered lecture automation platform designed to help students never miss an online class. Inspired by a real student problem, the platform automatically joins scheduled lectures, tracks attendance, captures attendance proof screenshots, generates AI-powered lecture summaries, and provides real-time monitoring through a cloud-native DevOps architecture.
 
 ## Features
 
